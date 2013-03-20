@@ -5,7 +5,7 @@
     setup.py
     ~~~~~~~~
 
-    Salt Continuous Integration Package Setup
+    Salt Cloud Buildbot Latent Slave support for Buildbot
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
@@ -13,13 +13,9 @@
 '''
 
 import os
-import subprocess
 from setuptools import setup
-from distutils import log
-from distutils.command import clean, build
-from distutils.extension import Extension
 
-import saltci as package
+import saltcloud_buildbot as package
 
 
 REQUIREMENTS = ['Distribute']
