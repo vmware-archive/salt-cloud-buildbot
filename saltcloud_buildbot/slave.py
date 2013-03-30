@@ -111,7 +111,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         # The machine name
         config['names'] = [self.saltcloud_vm_name]
-        log.setup_console_logger(
+        salt.log.setup_console_logger(
             config['log_level'],
             log_format=config['log_fmt_console'],
             date_format=config['log_datefmt']
