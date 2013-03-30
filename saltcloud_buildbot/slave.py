@@ -11,15 +11,15 @@
 '''
 
 # Import python libs
-import os
 import random
 import logging
 
 # Import twisted libs
-from twisted.internet import defer, error, protocol, reactor, threads
+from twisted.internet import defer, threads
 from twisted.python import log as twlog
 
 # Import salt & salt-cloud libs
+import salt.log
 import salt.config
 import saltcloud.cloud
 import saltcloud.config
@@ -29,6 +29,7 @@ from buildbot.buildslave import AbstractLatentBuildSlave
 from buildbot import interfaces
 
 
+salt.log.setup_temp_logger()
 # Let the python logging come through
 observer = twlog.PythonLoggingObserver()
 observer.start()
@@ -113,6 +114,41 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         # The machine name
         config['names'] = [self.saltcloud_vm_name]
+        log.setup_console_logger(
+            config['log_level'],
+            log_format=config['log_fmt_console'],
+            date_format=config['log_datefmt']
+        )
+
+        loglevel = config.get(
+            'log_level_logfile', config['log_level']
+        )
+
+        if config.get('log_fmt_logfile', None) is None:
+            # Remove it from config so it inherits from log_fmt_console
+            config.pop('log_fmt_logfile', None)
+
+        logfmt = config.get(
+            'log_fmt_logfile', config['log_fmt_console']
+        )
+
+        if config.get('log_datefmt', None) is None:
+            # Remove it from config so it get's the default value bellow
+            config.pop('log_datefmt', None)
+
+        datefmt = config.get(
+            'log_datefmt_logfile',
+            config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        )
+        salt.log.setup_logfile_logger(
+            config['log_file'],
+            loglevel,
+            log_format=logfmt,
+            date_format=datefmt
+        )
+        for name, level in config['log_granular_levels'].items():
+            salt.log.set_logger_level(name, level)
+
         return config
 
     # AbstractLatentBuildSlave methods
@@ -128,9 +164,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.run_profile()
-            return salt.output.out_format(ret, 'pprint', config)
-        except Exception:
+            return defer.succeed(
+                salt.output.out_format(ret, 'pprint', config)
+            )
+        except Exception, err:
             log.error('There was a profile error.', exc_info=True)
+            return defer.failure(err)
             raise
 
         #raise interfaces.LatentBuildSlaveFailedToSubstantiate(
