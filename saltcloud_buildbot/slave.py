@@ -104,7 +104,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             'map': '',
             'deploy': True,
             'parallel': False,
-            'keep_temp': False
+            'keep_tmp': False
         })
 
         # The profile we wish to run
