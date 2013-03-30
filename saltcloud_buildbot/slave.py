@@ -161,6 +161,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         config = self.__load_saltcloud_config()
 
         # Setup the required slave grains to be used by the minion
+        if 'master' not in config['minion']:
+            import urllib2
+            public_ip = urllib2.urlopen('http://v4.ident.me/').read()
+            config['minion']['master'] = public_ip
         config['minion']['grains']['buildbot']['slavename'] = self.slavename
         config['minion']['grains']['buildbot']['password'] = self.password
 
