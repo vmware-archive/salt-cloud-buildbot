@@ -77,7 +77,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         )
 
         self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
-            self.name, random.randrange(0, 10001, 2)
+            self.slavename, random.randrange(0, 10001, 2)
         )
         self.saltcloud_config = saltcloud_config or '/etc/salt/cloud'
         self.saltcloud_vm_config = saltcloud_vm_config or '/etc/salt/cloud.profiles'
