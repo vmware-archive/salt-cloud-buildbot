@@ -72,9 +72,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             locks
         )
 
-        self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
-            self.slavename, random.randrange(0, 10001, 2)
-        )
+        #self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
+        #    self.slavename, random.randrange(0, 10001, 2)
+        #)
         self.saltcloud_config = saltcloud_config or '/etc/salt/cloud'
         self.saltcloud_vm_config = saltcloud_vm_config or '/etc/salt/cloud.profiles'
         self.saltcloud_master_config = saltcloud_master_config or '/etc/salt/master'
@@ -111,7 +111,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         config['profile'] = self.saltcloud_profile_name
 
         # The machine name
-        config['names'] = [self.saltcloud_vm_name]
+        config['names'] = [self.slavename]
         salt.log.setup_console_logger(
             config['log_level'],
             log_format=config['log_fmt_console'],
