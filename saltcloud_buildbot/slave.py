@@ -13,33 +13,28 @@
 # Import python libs
 import os
 import random
+import logging
 
 # Import twisted libs
 from twisted.internet import defer, error, protocol, reactor, threads
+from twisted.python import log as twlog
+
+# Import salt & salt-cloud libs
+import salt.config
+import saltcloud.cloud
+import saltcloud.config
 
 # Import buildbot libs
 from buildbot.buildslave import AbstractLatentBuildSlave
 from buildbot import interfaces
 
 
-class SaltCloudProcessProtocol(protocol.ProcessProtocol):
-    outBuffer = ''
-    errBuffer = ''
+# Let the python logging come through
+observer = twlog.PythonLoggingObserver()
+observer.start()
 
-    def __init__(self):
-        self.deferred = defer.Deferred()
 
-    def outReceived(self, data):
-        self.outBuffer += data
-
-    def errReceived(self, data):
-        self.errBuffer += data
-
-    def processEnded(self, reason):
-        if reason.check(error.ProcessDone):
-            self.deferred.callback(self.outBuffer)
-        else:
-            self.deferred.errback(reason)
+log = logging.getLogger(__name__)
 
 
 class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
@@ -88,53 +83,67 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         self.saltcloud_master_config = saltcloud_master_config or '/etc/salt/master'
         self.saltcloud_profile_name = saltcloud_profile_name
 
+    def __load_saltcloud_config(self):
+        # Read/Parse salt-cloud configurations
+
+        # salt master configuration
+        master_config = salt.config.master_config(self.saltcloud_master_config)
+
+        # salt-cloud config
+        cloud_config = saltcloud.config.cloud_config(
+            self.saltcloud_config
+        )
+
+        # profiles configuration
+        profiles_config = saltcloud.config.vm_profiles_config(
+            self.saltcloud_vm_config
+        )
+
+        config = master_config.copy()
+        config.update(cloud_config)
+        config['vm'] = profiles_config
+
+        # The profile we wish to run
+        config['profile'] = self.saltcloud_profile_name
+
+        # The machine name
+        config['names'] = [self.saltcloud_vm_name]
+        return config
+
     # AbstractLatentBuildSlave methods
     def start_instance(self, build):
         # responsible for starting instance that will try to connect with this
         # master. Should return deferred with either True (instance started)
         # or False (instance not started, so don't run a build here). Problems
         # should use an errback.
-        protocol = SaltCloudProcessProtocol()
+        return threads.deferToThread(self._start_instance)
 
-        reactor.spawnProcess(
-            protocol,
-            'salt-cloud',
-            args=[
-                'salt-cloud',
-                '-C', self.saltcloud_config,
-                '-M', self.saltcloud_master_config,
-                '-V', self.saltcloud_vm_config,
-                '-p', self.saltcloud_profile_name,
-                self.saltcloud_vm_name
-            ],
-            env=os.environ.copy(),
-            #path,
-            #uid,
-            #gid,
-            #usePTY,
-            #childFDs
-        )
-        return protocol.deferred
+    def _start_instance(self):
+        config = self.__load_saltcloud_config()
+        mapper = saltcloud.cloud.Map(config)
+        try:
+            ret = mapper.run_profile()
+            return salt.output.out_format(ret, 'pprint', config)
+        except Exception:
+            log.error('There was a profile error.', exc_info=True)
+            raise
+
+        #raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+        #    self.instance.id, self.instance.state
+        #)
 
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
-        protocol = SaltCloudProcessProtocol()
+        return threads.deferToThread(self._stop_instance)
 
-        reactor.spawnProcess(
-            protocol,
-            'salt-cloud',
-            args=[
-                'salt-cloud',
-                '-C', self.saltcloud_config,
-                '-M', self.saltcloud_master_config,
-                '-V', self.saltcloud_vm_config,
-                '-d', self.saltcloud_vm_name
-            ],
-            env=os.environ.copy(),
-            #path,
-            #uid,
-            #gid,
-            #usePTY,
-            #childFDs
-        )
-        return protocol.deferred
+    def _stop_instance(self):
+        config = self.__load_saltcloud_config()
+        mapper = saltcloud.cloud.Map(config)
+        try:
+            ret = mapper.destroy(config['names'])
+            return salt.output.out_format(ret, 'pprint', config)
+        except Exception:
+            log.debug(
+                'There was an error destroying machines.', exc_info=True
+            )
+            raise
