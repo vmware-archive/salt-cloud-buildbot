@@ -72,9 +72,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             locks
         )
 
-        #self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
-        #    self.slavename, random.randrange(0, 10001, 2)
-        #)
+        self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
+            self.slavename, random.randrange(0, 10001, 2)
+        )
         self.saltcloud_config = saltcloud_config or '/etc/salt/cloud'
         self.saltcloud_vm_config = saltcloud_vm_config or '/etc/salt/cloud.profiles'
         self.saltcloud_master_config = saltcloud_master_config or '/etc/salt/master'
@@ -111,7 +111,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         config['profile'] = self.saltcloud_profile_name
 
         # The machine name
-        config['names'] = [self.slavename]
+        config['names'] = [self.saltcloud_vm_name]
         salt.log.setup_console_logger(
             config['log_level'],
             log_format=config['log_fmt_console'],
@@ -159,6 +159,11 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
     def _start_instance(self):
         config = self.__load_saltcloud_config()
+
+        # Setup the required slave grains to be used by the minion
+        config['minion']['grains']['buildbot']['slavename'] = self.slavename
+        config['minion']['grains']['buildbot']['password'] = self.password
+
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.run_profile()
