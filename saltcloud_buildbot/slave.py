@@ -16,7 +16,6 @@ import logging
 
 # Import twisted libs
 from twisted.internet import defer, threads
-from twisted.python import log as twlog
 
 # Import salt & salt-cloud libs
 import salt.log
@@ -29,11 +28,8 @@ from buildbot.buildslave import AbstractLatentBuildSlave
 from buildbot import interfaces
 
 
+# Setup the salt temporary logging
 salt.log.setup_temp_logger()
-# Let the python logging come through
-observer = twlog.PythonLoggingObserver()
-observer.start()
-
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +102,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         # Update with some parsers cli defaults
         config.update({
             'map': '',
+            'deploy': True,
             'parallel': False
         })
 
