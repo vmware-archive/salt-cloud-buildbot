@@ -101,8 +101,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         config = master_config.copy()
         config.update(cloud_config)
-        config.update({'map': ''})
         config['vm'] = profiles_config
+        # Update with some parsers cli defaults
+        config.update({
+            'map': '',
+            'parallel': False
+        })
 
         # The profile we wish to run
         config['profile'] = self.saltcloud_profile_name
