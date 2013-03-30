@@ -103,7 +103,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         config.update({
             'map': '',
             'deploy': True,
-            'parallel': False
+            'parallel': False,
+            'keep_temp': False
         })
 
         # The profile we wish to run
