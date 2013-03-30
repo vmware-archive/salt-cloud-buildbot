@@ -26,7 +26,7 @@ class SaltCloudProcessProtocol(protocol.ProcessProtocol):
     outBuffer = ''
     errBuffer = ''
 
-    def connectionMade(self):
+    def __init__(self):
         self.deferred = defer.Deferred()
 
     def outReceived(self, data):
@@ -96,7 +96,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         # should use an errback.
         protocol = SaltCloudProcessProtocol()
 
-        return reactor.spawnProcess(
+        reactor.spawnProcess(
             protocol,
             'salt-cloud',
             args=[
@@ -113,13 +113,14 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             #gid,
             #usePTY,
             #childFDs
-        ).deferred
+        )
+        return protocol.deferred
 
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
         protocol = SaltCloudProcessProtocol()
 
-        return reactor.spawnProcess(
+        reactor.spawnProcess(
             protocol,
             'salt-cloud',
             args=[
@@ -135,4 +136,5 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             #gid,
             #usePTY,
             #childFDs
-        ).deferred
+        )
+        return protocol.deferred
