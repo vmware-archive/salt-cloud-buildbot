@@ -84,7 +84,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         self.saltcloud_master_config = saltcloud_master_config or '/etc/salt/master'
         self.saltcloud_profile_name = saltcloud_profile_name
 
-
     def __load_saltcloud_config(self):
         if self._saltcloud_config is not None:
             return self._saltcloud_config
@@ -165,7 +164,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         # should use an errback.
         return threads.deferToThread(self.__start_instance)
 
-    def __start_instance(self)
+    def __start_instance(self):
         config = self.__load_saltcloud_config()
 
         # Setup the required slave grains to be used by the minion
