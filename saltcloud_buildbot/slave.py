@@ -192,8 +192,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         try:
             ret = mapper.destroy(config['names'])
             return salt.output.out_format(ret, 'pprint', config)
-        except Exception:
+        except Exception, err:
             log.debug(
                 'There was an error destroying machines.', exc_info=True
             )
-            raise
+            raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+                self.slavename, err
+            )
