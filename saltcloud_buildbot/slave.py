@@ -14,22 +14,22 @@
 import random
 import logging
 
-# Import twisted libs
-from twisted.internet import defer, reactor, threads
-
 # Import salt & salt-cloud libs
 import salt.log
 import salt.config
 import saltcloud.cloud
 import saltcloud.config
 
+# Setup the salt temporary logging
+salt.log.setup_temp_logger()
+
+# Import twisted libs
+from twisted.internet import defer, reactor, threads
+
 # Import buildbot libs
 from buildbot.buildslave import AbstractLatentBuildSlave
 from buildbot import interfaces
 
-
-# Setup the salt temporary logging
-salt.log.setup_temp_logger()
 
 log = logging.getLogger(__name__)
 
@@ -178,12 +178,26 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.run_profile()
-            return salt.output.out_format(ret, 'pprint', config)
-        except Exception, err:
-            log.error('There was a profile error.', exc_info=True)
-            raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                self.slavename, err
+            log.info(
+                'salt-cloud started VM {0} for slave {1}. '
+                'Details:\n{2}'.format(
+                    self.saltcloud_vm_name,
+                    self.slavename,
+                    salt.output.out_format(ret, 'pprint', config)
+                )
             )
+            return True
+        except Exception, err:
+            log.error(
+                'salt-cloud failed to start VM {0} for slave {1}. '
+                'Details:\n{2}'.format(
+                    self.saltcloud_vm_name,
+                    self.slavename,
+                    err
+                ),
+                exc_info=True
+            )
+            return False
 
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
@@ -194,9 +208,23 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.destroy(config['names'])
-            return salt.output.out_format(ret, 'pprint', config)
-        except Exception:
-            log.debug(
-                'There was an error destroying machines.', exc_info=True
+            log.info(
+                'salt-cloud stopped VM {0} for slave {1}. '
+                'Details:\n{2}'.format(
+                    self.saltcloud_vm_name,
+                    self.slavename,
+                    salt.output.out_format(ret, 'pprint', config)
+                )
             )
-            raise
+            return True
+        except Exception, err:
+            log.error(
+                'salt-cloud failed to stop VM {0} for slave {1}. '
+                'Details:\n{2}'.format(
+                    self.saltcloud_vm_name,
+                    self.slavename,
+                    err
+                ),
+                exc_info=True
+            )
+            return False
