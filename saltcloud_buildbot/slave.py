@@ -15,7 +15,7 @@ import random
 import logging
 
 # Import twisted libs
-from twisted.internet import defer, threads
+from twisted.internet import defer, reactor, threads
 
 # Import salt & salt-cloud libs
 import salt.log
@@ -32,6 +32,9 @@ from buildbot import interfaces
 salt.log.setup_temp_logger()
 
 log = logging.getLogger(__name__)
+
+
+reactor.suggestThreadPoolSize(30)
 
 
 class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
