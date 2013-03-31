@@ -72,6 +72,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             locks
         )
 
+        self._saltcloud_config = None
         self.saltcloud_vm_name = '{0}-buildbot-rnd{1:04d}'.format(
             self.slavename, random.randrange(0, 10001, 2)
         )
@@ -81,8 +82,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         self.saltcloud_profile_name = saltcloud_profile_name
 
     def __load_saltcloud_config(self):
-        # Read/Parse salt-cloud configurations
+        if self._saltcloud_config is not None:
+            return self._saltcloud_config
 
+        # Read/Parse salt-cloud configurations
         # salt master configuration
         master_config = salt.config.master_config(self.saltcloud_master_config)
 
@@ -147,7 +150,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         for name, level in config['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
 
-        return config
+        self._saltcloud_config = config
+        return self._saltcloud_config
 
     # AbstractLatentBuildSlave methods
     def start_instance(self, build):
@@ -171,17 +175,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.run_profile()
-            return defer.succeed(
-                salt.output.out_format(ret, 'pprint', config)
-            )
+            return salt.output.out_format(ret, 'pprint', config)
         except Exception, err:
             log.error('There was a profile error.', exc_info=True)
-            return defer.failure(err)
-            raise
-
-        #raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-        #    self.instance.id, self.instance.state
-        #)
+            raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+                self.slavename, err
+            )
 
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
