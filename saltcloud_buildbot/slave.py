@@ -158,26 +158,27 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         return self._saltcloud_config
 
     # AbstractLatentBuildSlave methods
-    @defer.inlineCallbacks
     def start_instance(self, build):
         # responsible for starting instance that will try to connect with this
         # master. Should return deferred with either True (instance started)
         # or False (instance not started, so don't run a build here). Problems
         # should use an errback.
+        return threads.deferToThread(self.__start_instance)
 
+    def __start_instance(self)
         config = self.__load_saltcloud_config()
 
         # Setup the required slave grains to be used by the minion
         if 'master' not in config['minion']:
             import urllib2
-            public_ip = yield urllib2.urlopen('http://v4.ident.me/').read()
+            public_ip = urllib2.urlopen('http://v4.ident.me/').read()
             config['minion']['master'] = public_ip
         config['minion']['grains']['buildbot']['slavename'] = self.slavename
         config['minion']['grains']['buildbot']['password'] = self.password
 
         mapper = saltcloud.cloud.Map(config)
         try:
-            ret = yield mapper.run_profile()
+            ret = mapper.run_profile()
             log.info(
                 'salt-cloud started VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
@@ -186,7 +187,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
-            defer.returnValue(True)
+            return True
         except Exception, err:
             log.error(
                 'salt-cloud failed to start VM {0} for slave {1}. '
@@ -197,15 +198,17 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 ),
                 exc_info=True
             )
-            defer.returnValue(False)
+            return False
 
-    @defer.inlineCallbacks
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
+        return threads.deferToThread(self.__stop_instance)
+
+    def __stop_instance(self):
         config = self.__load_saltcloud_config()
-        mapper = yield saltcloud.cloud.Map(config)
+        mapper = saltcloud.cloud.Map(config)
         try:
-            ret = yield mapper.destroy(config['names'])
+            ret = mapper.destroy(config['names'])
             log.info(
                 'salt-cloud stopped VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
@@ -214,7 +217,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
-            defer.returnValue(True)
+            return True
         except Exception, err:
             log.error(
                 'salt-cloud failed to stop VM {0} for slave {1}. '
@@ -225,4 +228,4 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 ),
                 exc_info=True
             )
-            defer.returnValue(False)
+            return False
