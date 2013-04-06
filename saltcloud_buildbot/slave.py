@@ -197,7 +197,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     try:
                         request = urllib2.urlopen('http://v4.ident.me/')
                         public_ip = request.read()
-                        config['minion']['master'] = public_ip
+                        minion_conf['master'] = public_ip
                         break
                     except urllib2.HTTPError:
                         log.warn(
