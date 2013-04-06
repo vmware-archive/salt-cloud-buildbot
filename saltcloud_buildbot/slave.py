@@ -181,32 +181,42 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
     def __start_instance(self):
         config = self.__load_saltcloud_config()
 
-        # Setup the required slave grains to be used by the minion
-        if 'master' not in config['minion']:
-            import urllib2
-            attempts = 5
-            while attempts > 0:
-                try:
-                    public_ip = urllib2.urlopen('http://v4.ident.me/').read()
-                    config['minion']['master'] = public_ip
-                    break
-                except urllib2.HTTPError:
-                    log.warn(
-                        'Failed to get the public IP for the master. '
-                        'Remaining attempts: {0}'.format(
-                            attempts
-                        ),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+        for idx, vm_ in enumerate(config['vm']):
+            if vm_['profile'] != config['profile']:
+                continue
+
+            minion_conf = saltcloud.config.get_config_value(
+                'minion', vm_, config, default={}
+            )
+
+            # Setup the required slave grains to be used by the minion
+            if 'master' not in minion_conf:
+                import urllib2
+                attempts = 5
+                while attempts > 0:
+                    try:
+                        request = urllib2.urlopen('http://v4.ident.me/')
+                        public_ip = request.read()
+                        config['minion']['master'] = public_ip
+                        break
+                    except urllib2.HTTPError:
+                        log.warn(
+                            'Failed to get the public IP for the master. '
+                            'Remaining attempts: {0}'.format(
+                                attempts
+                            ),
+                            # Show the traceback if the debug logging level is
+                            # enabled
+                            exc_info=log.isEnabledFor(logging.DEBUG)
+                        )
+                else:
+                    raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+                        config['profile'],
+                        'Failed to get the public IP for the master.'
                     )
-            else:
-                raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                    config['profile'],
-                    'Failed to get the public IP for the master.'
-                )
-        config['minion']['grains']['buildbot']['slavename'] = self.slavename
-        config['minion']['grains']['buildbot']['password'] = self.password
+            minion_conf['grains']['buildbot']['slavename'] = self.slavename
+            minion_conf['grains']['buildbot']['password'] = self.password
+            config['vm'][idx]['minion'] = minion_conf
 
         mapper = saltcloud.cloud.Map(config)
         try:
