@@ -184,8 +184,27 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         # Setup the required slave grains to be used by the minion
         if 'master' not in config['minion']:
             import urllib2
-            public_ip = urllib2.urlopen('http://v4.ident.me/').read()
-            config['minion']['master'] = public_ip
+            attempts = 5
+            while attempts > 0:
+                try:
+                    public_ip = urllib2.urlopen('http://v4.ident.me/').read()
+                    config['minion']['master'] = public_ip
+                    break
+                except urllib2.HTTPError:
+                    log.warn(
+                        'Failed to get the public IP for the master. '
+                        'Remaining attempts: {0}'.format(
+                            attempts
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
+                    )
+            else:
+                raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+                    config['profile'],
+                    'Failed to get the public IP for the master.'
+                )
         config['minion']['grains']['buildbot']['slavename'] = self.slavename
         config['minion']['grains']['buildbot']['password'] = self.password
 
