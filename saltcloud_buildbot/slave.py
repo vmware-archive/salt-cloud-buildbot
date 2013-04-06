@@ -56,6 +56,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         saltcloud_config='/etc/salt/cloud',
         saltcloud_vm_config='/etc/salt/cloud.profiles',
         saltcloud_master_config='/etc/salt/master',
+        saltcloud_providers_config='/etc/salt/cloud.providers'
     ):
 
         if single_build:
@@ -80,8 +81,15 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             self.slavename, random.randrange(0, 10001, 2)
         )
         self.saltcloud_config = saltcloud_config or '/etc/salt/cloud'
-        self.saltcloud_vm_config = saltcloud_vm_config or '/etc/salt/cloud.profiles'
-        self.saltcloud_master_config = saltcloud_master_config or '/etc/salt/master'
+        self.saltcloud_vm_config = (
+            saltcloud_vm_config or '/etc/salt/cloud.profiles'
+        )
+        self.saltcloud_master_config = (
+            saltcloud_master_config or '/etc/salt/master'
+        )
+        self.saltcloud_providers_config = (
+            saltcloud_providers_config or '/etc/salt/cloud.providers'
+        )
         self.saltcloud_profile_name = saltcloud_profile_name
 
     def __load_saltcloud_config(self):
@@ -102,12 +110,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             self.saltcloud_vm_config
         )
 
+        providers_config = saltcloud.config.cloud_providers_config(
+            self.saltcloud_providers_config
+        )
+
         config = master_config.copy()
         config.update(cloud_config)
         config['vm'] = profiles_config
+        config['providers'] = providers_config
+
         # Update with some parsers cli defaults
         config.update({
-            'map': '',
+            'map': None,
             'deploy': True,
             'parallel': False,
             'keep_tmp': False
