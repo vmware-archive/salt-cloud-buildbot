@@ -16,6 +16,7 @@ import logging
 
 # Import salt & salt-cloud libs
 import salt.log
+import salt.client
 import salt.config
 import saltcloud.cloud
 import saltcloud.config
@@ -98,7 +99,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         # Read/Parse salt-cloud configurations
         # salt master configuration
-        master_config = salt.config.master_config(self.saltcloud_master_config)
+        master_config = self._salt_master_config = salt.config.master_config(
+            self.saltcloud_master_config
+        )
 
         # salt-cloud config
         cloud_config = saltcloud.config.cloud_config(
@@ -239,7 +242,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
-            return True
         except Exception, err:
             log.error(
                 'salt-cloud failed to start VM {0} for slave {1}. '
@@ -249,6 +251,37 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     err
                 ),
                 exc_info=True
+            )
+            return False
+
+        try:
+            log.info('Running \'state.highstate\' on the minion')
+            client = salt.client.LocalClient(
+                mopts=self._salt_master_config
+            )
+            #ret = client.cmd_iter(
+            ret = client.cmd_full_return(
+                self.saltcloud_vm_name, 'state.highstate', timeout=120
+            )
+            log.info(
+                'Output of running \'state.highstate\' on the {0} '
+                'minion({1}):\n{2}'.format(
+                    self.slavename,
+                    self.saltcloud_vm_name,
+                    salt.output.out_format(ret, 'pprint', config)
+                )
+            )
+            return True
+        except Exception, err:
+            log.error(
+                'Failed to run \'state.highstate\' on the {0} minion({1}). '
+                'Details:\n{2}'.format(
+                    self.slavename,
+                    self.saltcloud_vm_name,
+                    err
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
             return False
 
