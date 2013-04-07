@@ -264,7 +264,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             )
             #ret = client.cmd_iter(
             ret = client.cmd_full_return(
-                self.saltcloud_vm_name, 'state.highstate', timeout=120
+                self.saltcloud_vm_name, 'state.highstate',
+                timeout=15 * 60  # wait at most 15 minutes
             )
             log.info(
                 'Output of running \'state.highstate\' on the {0} '
