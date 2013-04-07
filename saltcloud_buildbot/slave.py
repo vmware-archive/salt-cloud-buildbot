@@ -214,8 +214,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         config['profile'],
                         'Failed to get the public IP for the master.'
                     )
-            minion_conf['grains']['buildbot']['slavename'] = self.slavename
-            minion_conf['grains']['buildbot']['password'] = self.password
+
+            # Set the buildbot slave name as a grain
+            minion_conf.setdefault(
+                'grains', {}).setdefault(
+                    'buildbot', {})['slavename'] = self.slavename
+
+            # Set the buildbot password as a grain
+            minion_conf.setdefault(
+                'grains', {}).setdefault(
+                    'buildbot', {})['password'] = self.password
+
+            # Update the virtual machines minion configuration
             config['vm'][idx]['minion'] = minion_conf
 
         mapper = saltcloud.cloud.Map(config)
