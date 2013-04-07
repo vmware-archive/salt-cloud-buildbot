@@ -242,6 +242,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
+            if not ret:
+                return False
         except Exception, err:
             log.error(
                 'salt-cloud failed to start VM {0} for slave {1}. '
@@ -271,6 +273,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
+            if not ret or 'Error' in ret:
+                return False
             return True
         except Exception, err:
             log.error(
