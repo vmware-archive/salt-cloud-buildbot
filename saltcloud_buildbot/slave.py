@@ -18,6 +18,7 @@ import logging
 import salt.log
 import salt.client
 import salt.config
+import salt.output
 import saltcloud.cloud
 import saltcloud.config
 
