@@ -98,10 +98,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         if self._saltcloud_config is not None:
             return self._saltcloud_config
 
-        # Setup some debug logging for now
-        log.setLevel(logging.DEBUG)
-        logging.getLogger('salt').setLevel(logging.DEBUG)
-        logging.getLogger('saltcloud').setLevel(logging.DEBUG)
+        # We want some early console debugging
+        salt.log.setup_console_logger('debug')
 
         # Read/Parse salt-cloud configurations
         # salt master configuration
@@ -141,6 +139,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         # The machine name
         config['names'] = [self.saltcloud_vm_name]
+
+        # Now configure logging respecting the configuration
         salt.log.setup_console_logger(
             config['log_level'],
             log_format=config['log_fmt_console'],
@@ -271,7 +271,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 mopts=self._salt_master_config
             )
             output = client.cmd_iter(
-            #ret = client.cmd_full_return(
                 self.saltcloud_vm_name, 'state.highstate',
                 timeout=999999999999
             )
