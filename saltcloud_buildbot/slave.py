@@ -259,20 +259,31 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         try:
             log.info('Running \'state.highstate\' on the minion')
+            job_logger = logging.getLogger(
+                '{0}.saltclient'.format(__name__)
+            )
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
-            #ret = client.cmd_iter(
-            ret = client.cmd_full_return(
+            output = client.cmd_iter(
+            #ret = client.cmd_full_return(
                 self.saltcloud_vm_name, 'state.highstate',
-                timeout=15 * 60  # wait at most 15 minutes
+                timeout=999999999999
             )
+            ret = {}
+            for info in output:
+                if not info:
+                    continue
+
+                job_logger.info(info)
+                ret.update(info)
+
             log.info(
                 'Output of running \'state.highstate\' on the {0} '
                 'minion({1}):\n{2}'.format(
                     self.slavename,
                     self.saltcloud_vm_name,
-                    salt.output.out_format(ret, 'pprint', config)
+                    salt.output.out_format(ret, 'highstate', config)
                 )
             )
             if not ret or 'Error' in ret:
