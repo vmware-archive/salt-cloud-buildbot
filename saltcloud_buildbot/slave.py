@@ -98,6 +98,11 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         if self._saltcloud_config is not None:
             return self._saltcloud_config
 
+        # Setup some debug logging for now
+        log.setLevel(logging.DEBUG)
+        logging.getLogger('salt').setLevel(logging.DEBUG)
+        logging.getLogger('saltcloud').setLevel(logging.DEBUG)
+
         # Read/Parse salt-cloud configurations
         # salt master configuration
         master_config = self._salt_master_config = salt.config.master_config(
