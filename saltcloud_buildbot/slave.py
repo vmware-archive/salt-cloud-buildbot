@@ -282,14 +282,27 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 job_logger.info(info)
                 ret.update(info)
 
-            log.info(
-                'Output of running \'state.highstate\' on the {0} '
-                'minion({1}):\n{2}'.format(
-                    self.slavename,
-                    self.saltcloud_vm_name,
-                    salt.output.out_format(ret, 'highstate', config)
+            log.debug(ret)
+            log.dbug(type(ret))
+            try:
+                log.info(
+                    'Output of running \'state.highstate\' on the {0} '
+                    'minion({1}):\n{2}'.format(
+                        self.slavename,
+                        self.saltcloud_vm_name,
+                        salt.output.out_format(ret, 'highstate', config)
+                    )
                 )
-            )
+            except AttributeError:
+                log.info(
+                    'Output of running \'state.highstate\' on the {0} '
+                    'minion({1}):\n{2}'.format(
+                        self.slavename,
+                        self.saltcloud_vm_name,
+                        salt.output.out_format(ret, 'pprint', config)
+                    )
+                )
+
             if not ret or 'Error' in ret:
                 return False
             return True
