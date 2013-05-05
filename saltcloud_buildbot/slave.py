@@ -278,6 +278,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 timeout=9999999999999999,
             )
 
+            # Let's wait a bit
+            time.sleep(3)
+
             while True:
                 running = client.cmd(
                     'saltutil.is_running',
