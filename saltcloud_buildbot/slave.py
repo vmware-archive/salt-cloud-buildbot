@@ -264,9 +264,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         try:
             log.info('Running \'state.highstate\' on the minion')
-            job_logger = logging.getLogger(
-                '{0}.saltclient'.format(__name__)
-            )
+            #job_logger = logging.getLogger(
+            #    '{0}.saltclient'.format(__name__)
+            #)
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
@@ -274,11 +274,11 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             #    self.saltcloud_vm_name, 'state.highstate',
             #    timeout=999999999999
             #)
-            job = client.run_job(
-                self.saltcloud_vm_name,
-                'state.highstate',
-                timeout=999999999999
-            )
+            #job = client.run_job(
+            #    self.saltcloud_vm_name,
+            #    'state.highstate',
+            #    timeout=999999999999
+            #)
 
             #ret = {}
             #for info in output:
@@ -290,10 +290,16 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
             #log.debug(ret)
             #log.dbug(type(ret))
-            ret = client.get_event_iter_returns(
-                job['job'],
-                job['minions'],
-                timeout=999999999999
+            #ret = client.get_event_iter_returns(
+            #ret = client.get_cli_static_event_return(
+            #    job['job'],
+            #    job['minions'],
+            #    #timeout=999999999999
+            #)
+            ret = client.cmd_full_return(
+                self.saltcloud_vm_name,
+                'state.highstate',
+                timeout=5
             )
             try:
                 log.info(
