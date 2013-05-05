@@ -275,7 +275,15 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
+        except Exception as err:
+            log.error(
+                'Failed to instantiate the salt local client: {0}\n'.format(
+                    err
+                ),
+                exc_info=True
+            )
 
+        try:
             attempts = 6
             while True:
                 log.info(
@@ -297,7 +305,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         if attempts < 1:
                             log.error(
                                 'Failed to publish \'state.highstate\' job to '
-                                '{0}. '.format(self.saltcloud_vm_name)
+                                '{0}. Returned empty response.'.format(
+                                    self.saltcloud_vm_name
+                                )
                             )
                             return False
                         continue
@@ -307,25 +317,26 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     if attempts < 1:
                         log.error(
                             'Failed to publish \'state.highstate\' job to '
-                            '{0}. '.format(self.saltcloud_vm_name)
+                            '{0}, timed out. '.format(self.saltcloud_vm_name)
                         )
                         return False
                     continue
 
+            log.info('Published job information: {0}'format(job))
             # Let the job start
-            time.sleep(2)
+            time.sleep(5)
 
             attempts = 6
             completed = False
             while True:
-                try:
-                    log.info(
-                        'Checking if \'state.highstate\' is running on '
-                        '{0}. Attempts remaining {1}'.format(
-                            self.saltcloud_vm_name,
-                            attempts - 1
-                        )
+                log.info(
+                    'Checking if \'state.highstate\' is running on '
+                    '{0}. Attempts remaining {1}'.format(
+                        self.saltcloud_vm_name,
+                        attempts - 1
                     )
+                )
+                try:
                     running = client.cmd(
                         [self.saltcloud_vm_name],
                         'saltutil.is_running',
@@ -337,7 +348,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     if attempts < 1:
                         log.error(
                             'Failed to check if state.highstate is running '
-                            'on {0}'.format(self.saltcloud_vm_name)
+                            'on {0}, timed out'.format(self.saltcloud_vm_name)
                         )
                         return False
                     continue
@@ -345,7 +356,11 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 # Reset failed attempts
                 attempts = 6
 
-                job_logger.debug('IS RUNNING: {0}'.format(running))
+                log.debug(
+                    'Job is still running on {0}: {1}'.format(
+                        self.saltcloud_vm_name, running
+                    )
+                )
                 if running and completed:
                     # False positive, reset completed flag
                     completed = False
@@ -362,8 +377,13 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     break
                 time.sleep(5)
 
+            log.info(
+                'state.highstate has apparently completed in {0}'.format(
+                    self.saltcloud_vm_name
+                )
+            )
             # Let the minion settle
-            time.sleep(1)
+            time.sleep(2)
             log.info(
                 'Getting \'state.highstate\' job information from {0}'.format(
                     self.saltcloud_vm_name
@@ -406,7 +426,16 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
 
             if not ret or 'Error' in ret:
+                log.debug(
+                    'Returned empty or error running state.highstate on '
+                    '{0}: {1}'.format(self.saltcloud_vm_name, ret)
+                )
                 return False
+            log.info(
+                'state.highstate completed without any issues on {0}'.format(
+                    self.saltcloud_vm_name
+                )
+            )
             return True
         except Exception, err:
             log.error(
