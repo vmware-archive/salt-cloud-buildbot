@@ -385,36 +385,26 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             log.debug('0- {0}'.format(ret))
             try:
                 log.info(
-                    '1- Output of running \'state.highstate\' on the {0} '
+                    'Output of running \'state.highstate\' on the {0} '
                     'minion({1}):\n{2}'.format(
                         self.slavename,
                         self.saltcloud_vm_name,
-                        salt.output.out_format(ret, 'highstate', config)
+                        salt.output.out_format(
+                            ret[self.saltcloud_vm_name],
+                            'highstate',
+                            config
+                        )
                     )
                 )
-            except AttributeError:
-                try:
-                    log.info(
-                        '2 -Output of running \'state.highstate\' on the {0} '
-                        'minion({1}):\n{2}'.format(
-                            self.slavename,
-                            self.saltcloud_vm_name,
-                            salt.output.out_format(
-                                ret[self.saltcloud_vm_name],
-                                'highstate',
-                                config
-                            )
-                        )
+            except Exception:
+                log.info(
+                    'Output of running \'state.highstate\' on the {0} '
+                    'minion({1}):\n{2}'.format(
+                        self.slavename,
+                        self.saltcloud_vm_name,
+                        salt.output.out_format(ret, 'pprint', config)
                     )
-                except (AttributeError, KeyError):
-                    log.info(
-                        '3 -Output of running \'state.highstate\' on the {0} '
-                        'minion({1}):\n{2}'.format(
-                            self.slavename,
-                            self.saltcloud_vm_name,
-                            salt.output.out_format(ret, 'pprint', config)
-                        )
-                    )
+                )
 
             if not ret or 'Error' in ret:
                 log.debug(
