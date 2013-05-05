@@ -324,7 +324,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             time.sleep(5)
 
             attempts = 6
-            completed = False
             while True:
                 log.info(
                     'Checking if \'state.highstate\' is running on '
@@ -358,13 +357,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         self.saltcloud_vm_name, running
                     )
                 )
-                if running and completed:
-                    # False positive, reset completed flag
-                    completed = False
-                elif not running and not completed:
-                    # Let's try not to get false positives
-                    completed = True
-                elif not running and completed:
+                if running and running.get(self.saltcloud_vm_name, None) == []:
                     # Job is no longer running
                     log.info(
                         '\'state.highstate\' has completed on {0}'.format(
