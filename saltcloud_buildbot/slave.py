@@ -443,8 +443,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                     return False
                 log.info(
-                    'Started the buildbot slave on {0}'.format(
-                        self.saltcloud_vm_name
+                    'Started the buildbot slave on {0}: {1}'.format(
+                        self.saltcloud_vm_name, ret
                     )
                 )
                 return True
