@@ -280,7 +280,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             while True:
                 log.info(
                     'Publishing \'state.highstate\' job to {0}. '
-                    'Attempt {1}'.format(
+                    'Attempts remaining {1}'.format(
                         self.saltcloud_vm_name,
                         attempts - 1
                     )
@@ -310,11 +310,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             time.sleep(2)
 
             attempts = 6
+            completed = False
             while True:
                 try:
                     log.info(
                         'Checking if \'state.highstate\' is running on '
-                        '{0}. Attempt {1}'.format(
+                        '{0}. Attempts remaining {1}'.format(
                             self.saltcloud_vm_name,
                             attempts - 1
                         )
@@ -338,10 +339,21 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 attempts = 6
 
                 job_logger.debug('IS RUNNING: {0}'.format(running))
-                if not running:
+                if running and completed:
+                    # False positive, reset completed flag
+                    completed = False
+                elif not running and not completed:
+                    # Let's try not to get false positives
+                    completed = True
+                elif not running and completed:
                     # Job is no longer running
+                    log.info(
+                        '\'state.highstate\' has completed on {0}'.format(
+                            self.saltcloud_vm_name
+                        )
+                    )
                     break
-                time.sleep(1)
+                time.sleep(5)
 
             # Let the minion settle
             time.sleep(1)
