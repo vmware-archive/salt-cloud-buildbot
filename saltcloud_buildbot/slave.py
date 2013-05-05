@@ -351,6 +351,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         return False
                     continue
 
+                if not running:
+                    attempts -= 1
+                    if attempts < 1:
+                        log.error(
+                            'state.highstate is aparently not running '
+                            'on {0}, empty response'.format(
+                                self.saltcloud_vm_name
+                            )
+                        )
+                        return False
+                    continue
+
                 # Reset failed attempts
                 attempts = 6
 
