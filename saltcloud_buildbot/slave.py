@@ -247,7 +247,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 'Details:\n{2}'.format(
                     self.saltcloud_vm_name,
                     self.slavename,
-                    salt.output.out_format(ret, 'pprint', config)
+                    salt.output.out_format(
+                        ret[self.saltcloud_vm_name], 'pprint', config
+                    )
                 )
             )
             if not ret:
@@ -379,10 +381,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_vm_name
                 )
             )
-            ret = client.get_full_returns(
+            highstate = client.get_full_returns(
                 job, [self.saltcloud_vm_name], timeout=5
             )
-            log.debug('0- {0}'.format(ret))
             try:
                 log.info(
                     'Output of running \'state.highstate\' on the {0} '
@@ -390,7 +391,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         self.slavename,
                         self.saltcloud_vm_name,
                         salt.output.out_format(
-                            ret[self.saltcloud_vm_name],
+                            highstate[self.saltcloud_vm_name],
                             'highstate',
                             config
                         )
@@ -402,16 +403,25 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     'minion({1}):\n{2}'.format(
                         self.slavename,
                         self.saltcloud_vm_name,
-                        salt.output.out_format(ret, 'pprint', config)
+                        salt.output.out_format(
+                            highstate, 'pprint', config
+                        )
                     )
                 )
 
-            if not ret or 'Error' in ret:
+            if not highstate or 'Error' in highstate:
                 log.debug(
                     'Returned empty or error running state.highstate on '
-                    '{0}: {1}'.format(self.saltcloud_vm_name, ret)
+                    '{0}: {1}'.format(self.saltcloud_vm_name, highstate)
                 )
                 return False
+
+            for step in highstate[self.saltcloud_vm_name]['ret'].values():
+                if step['result'] is False:
+                    log.error(
+                        'The step {0[name]!r} failed!'.format(step)
+                    )
+                    return False
             log.info(
                 'state.highstate completed without any issues on {0}'.format(
                     self.saltcloud_vm_name
