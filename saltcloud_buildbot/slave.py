@@ -20,6 +20,7 @@ import salt.log
 import salt.client
 import salt.config
 import salt.output
+import salt.exceptions
 import saltcloud.cloud
 import saltcloud.config
 
@@ -281,14 +282,27 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             # Let's wait a bit
             time.sleep(3)
 
+            attempts = 0
             while True:
-                running = client.cmd(
-                    [self.saltcloud_vm_name],
-                    'saltutil.is_running',
-                    arg=('state.highstate',),
-                    expr_form='list'
-                )
-                log.debug('IS RUNNING: {0}'.format(running))
+                try:
+                    running = client.cmd(
+                        [self.saltcloud_vm_name],
+                        'saltutil.is_running',
+                        arg=('state.highstate',),
+                        expr_form='list'
+                    )
+                except salt.exceptions.SaltReqTimeoutError:
+                    attempts += 1
+                    if attempts > 5:
+                        log.error(
+                            'Failed to check if state.highstate is running '
+                            'on the slave minion'
+                        )
+                    return False
+                # Reset failed attempts
+                attempts = 0
+
+                job_logger.debug('IS RUNNING: {0}'.format(running))
                 if not running:
                     break
                 time.sleep(1)
