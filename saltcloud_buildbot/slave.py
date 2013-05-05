@@ -387,9 +387,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 )
             )
             ret = client.get_returns(
-                job['jid'],
-                [self.saltcloud_vm_name],
-                timeout=5
+                job, [self.saltcloud_vm_name], timeout=5
             )
             try:
                 log.info(
