@@ -270,20 +270,31 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
-            output = client.cmd_iter(
-                self.saltcloud_vm_name, 'state.highstate',
+            #output = client.cmd_iter(
+            #    self.saltcloud_vm_name, 'state.highstate',
+            #    timeout=999999999999
+            #)
+            job = client.run_job(
+                self.saltcloud_vm_name,
+                'state.highstate',
                 timeout=999999999999
             )
-            ret = {}
-            for info in output:
-                if not info:
-                    continue
 
-                job_logger.info(info)
-                ret.update(info)
+            #ret = {}
+            #for info in output:
+            #    if not info:
+            #        continue
+            #
+            #    job_logger.info(info)
+            #    ret.update(info)
 
-            log.debug(ret)
-            log.dbug(type(ret))
+            #log.debug(ret)
+            #log.dbug(type(ret))
+            ret = client.get_event_iter_returns(
+                job['job'],
+                job['minions'],
+                timeout=999999999999
+            )
             try:
                 log.info(
                     'Output of running \'state.highstate\' on the {0} '
