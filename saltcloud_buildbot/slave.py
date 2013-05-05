@@ -322,7 +322,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         return False
                     continue
 
-            log.info('Published job information: {0}'format(job))
+            log.info('Published job information: {0}'.format(job))
             # Let the job start
             time.sleep(5)
 
