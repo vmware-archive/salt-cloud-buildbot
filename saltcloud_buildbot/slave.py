@@ -437,6 +437,35 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 )
             )
             return True
+
+            # Start the buildbot slave
+            try:
+                ret = client.cmd(
+                    self.saltcloud_vm_name,
+                    'state.single',
+                    arg=('start-buildbot.start-buildbot-slave',),
+                    timeout=25
+                )
+                if not ret:
+                    log.error(
+                        'Failed to start the buildbot slave on {0}, '
+                        'empty response: {1}'.format(
+                            self.saltcloud_vm_name, ret
+                        )
+                    )
+                    return False
+                log.info(
+                    'Started the buildbot slave on {0}'.format(
+                        self.saltcloud_vm_name
+                    )
+                )
+                return True
+            except salt.exceptions.SaltReqTimeoutError:
+                log.error(
+                    'Failed to start the buildbot slave on {0}, '
+                    'timed out'.format(self.saltcloud_vm_name)
+                )
+                return False
         except Exception, err:
             log.error(
                 'Failed to run \'state.highstate\' on the {0} minion({1}). '
