@@ -269,9 +269,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         try:
             log.info('Running \'state.highstate\' on the minion')
-            job_logger = logging.getLogger(
-                '{0}.saltclient'.format(__name__)
-            )
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
@@ -294,7 +291,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
                 try:
-                    job = client.run_job(
+                    job = client.cmd_async(
                         [self.saltcloud_vm_name],
                         'state.highstate',
                         expr_form='list',
@@ -389,7 +386,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_vm_name
                 )
             )
-            ret = client.get_full_returns(
+            ret = client.get_returns(
                 job['jid'],
                 [self.saltcloud_vm_name],
                 timeout=5
@@ -436,7 +433,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_vm_name
                 )
             )
-            return True
 
             # Start the buildbot slave
             try:
