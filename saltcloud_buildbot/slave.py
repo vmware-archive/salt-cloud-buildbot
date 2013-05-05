@@ -283,8 +283,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
             while True:
                 running = client.cmd(
-                    'saltutil.is_running',
                     [self.saltcloud_vm_name],
+                    'saltutil.is_running',
                     arg=('state.highstate',),
                     expr_form='list'
                 )
