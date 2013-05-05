@@ -400,7 +400,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             self.slavename,
                             self.saltcloud_vm_name,
                             salt.output.out_format(
-                                ret['ret'], 'highstate', config
+                                ret[self.saltcloud_vm_name]['ret'], 'highstate', config
                             )
                         )
                     )
