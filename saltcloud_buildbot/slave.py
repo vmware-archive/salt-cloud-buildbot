@@ -272,19 +272,50 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
-            job = client.run_job(
-                [self.saltcloud_vm_name],
-                'state.highstate',
-                expr_form='list',
-                timeout=9999999999999999,
-            )
+
+            attempts = 6
+            while True:
+                log.info(
+                    'Publishing \'state.highstate\' job to {0}. '
+                    'Attempt {1}'.format(
+                        self.saltcloud_vm_name,
+                        attempts - 1
+                    )
+                )
+                try:
+                    job = client.run_job(
+                        [self.saltcloud_vm_name],
+                        'state.highstate',
+                        expr_form='list',
+                        timeout=9999999999999999,
+                    )
+                    if not job:
+                        attempts -= 1
+                        continue
+
+                    break
+                except salt.exceptions.SaltReqTimeoutError:
+                    attempts -= 1
+                    if attempts < 1:
+                        log.error(
+                            'Failed to publish \'state.highstate\' job to '
+                            '{0}. '.format(self.saltcloud_vm_name)
+                        )
+                    return False
 
             # Let's wait a bit
             time.sleep(3)
 
-            attempts = 0
+            attempts = 6
             while True:
                 try:
+                    log.info(
+                        'Checking if \'state.highstate\' is running on '
+                        '{0}. Attempt {1}'.format(
+                            self.saltcloud_vm_name,
+                            attempts - 1
+                        )
+                    )
                     running = client.cmd(
                         [self.saltcloud_vm_name],
                         'saltutil.is_running',
@@ -292,21 +323,29 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         expr_form='list'
                     )
                 except salt.exceptions.SaltReqTimeoutError:
-                    attempts += 1
-                    if attempts > 5:
+                    attempts -= 1
+                    if attempts < 1:
                         log.error(
                             'Failed to check if state.highstate is running '
-                            'on the slave minion'
+                            'on {0}'.format(self.saltcloud_vm_name)
                         )
                     return False
+
                 # Reset failed attempts
-                attempts = 0
+                attempts = 6
 
                 job_logger.debug('IS RUNNING: {0}'.format(running))
                 if not running:
+                    # Job is no longer running
                     break
                 time.sleep(1)
 
+            time.sleep(1)
+            log.info(
+                'Getting \'state.highstate\' job information from {0}'.format(
+                    self.saltcloud_vm_name
+                )
+            )
             ret = client.get_full_returns(
                 job['jid'],
                 [self.saltcloud_vm_name],
@@ -314,7 +353,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             )
             try:
                 log.info(
-                    'Output of running \'state.highstate\' on the {0} '
+                    '1- Output of running \'state.highstate\' on the {0} '
                     'minion({1}):\n{2}'.format(
                         self.slavename,
                         self.saltcloud_vm_name,
@@ -322,14 +361,26 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
             except AttributeError:
-                log.info(
-                    'Output of running \'state.highstate\' on the {0} '
-                    'minion({1}):\n{2}'.format(
-                        self.slavename,
-                        self.saltcloud_vm_name,
-                        salt.output.out_format(ret, 'pprint', config)
+                try:
+                    log.info(
+                        '2 -Output of running \'state.highstate\' on the {0} '
+                        'minion({1}):\n{2}'.format(
+                            self.slavename,
+                            self.saltcloud_vm_name,
+                            salt.output.out_format(
+                                ret['ret'], 'highstate', config
+                            )
+                        )
                     )
-                )
+                except (AttributeError, KeyError):
+                    log.info(
+                        '3 -Output of running \'state.highstate\' on the {0} '
+                        'minion({1}):\n{2}'.format(
+                            self.slavename,
+                            self.saltcloud_vm_name,
+                            salt.output.out_format(ret, 'pprint', config)
+                        )
+                    )
 
             if not ret or 'Error' in ret:
                 return False
