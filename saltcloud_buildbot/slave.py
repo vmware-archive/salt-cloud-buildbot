@@ -294,8 +294,13 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                     if not job:
                         attempts -= 1
+                        if attempts < 1:
+                            log.error(
+                                'Failed to publish \'state.highstate\' job to '
+                                '{0}. '.format(self.saltcloud_vm_name)
+                            )
+                            return False
                         continue
-
                     break
                 except salt.exceptions.SaltReqTimeoutError:
                     attempts -= 1
@@ -304,7 +309,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             'Failed to publish \'state.highstate\' job to '
                             '{0}. '.format(self.saltcloud_vm_name)
                         )
-                    return False
+                        return False
+                    continue
 
             # Let the job start
             time.sleep(2)
@@ -333,7 +339,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             'Failed to check if state.highstate is running '
                             'on {0}'.format(self.saltcloud_vm_name)
                         )
-                    return False
+                        return False
+                    continue
 
                 # Reset failed attempts
                 attempts = 6
