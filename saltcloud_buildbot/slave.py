@@ -264,6 +264,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             )
             return False
 
+        # Let the minion connect back
+        time.sleep(2)
+
         try:
             log.info('Running \'state.highstate\' on the minion')
             job_logger = logging.getLogger(
@@ -303,8 +306,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     return False
 
-            # Let's wait a bit
-            time.sleep(3)
+            # Let the job start
+            time.sleep(2)
 
             attempts = 6
             while True:
@@ -340,6 +343,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     break
                 time.sleep(1)
 
+            # Let the minion settle
             time.sleep(1)
             log.info(
                 'Getting \'state.highstate\' job information from {0}'.format(
