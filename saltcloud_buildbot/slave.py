@@ -379,9 +379,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_vm_name
                 )
             )
-            ret = client.get_returns(
+            ret = client.get_full_returns(
                 job, [self.saltcloud_vm_name], timeout=5
             )
+            log.debug('0- {0}'.format(ret))
             try:
                 log.info(
                     '1- Output of running \'state.highstate\' on the {0} '
