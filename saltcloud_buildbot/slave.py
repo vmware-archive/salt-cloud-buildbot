@@ -436,6 +436,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 )
                 return False
 
+            if isinstance(highstate[self.saltcloud_vm_name]['ret'], list):
+                # We got a list back!?
+                log.error(
+                    'Failed to run \'state.highstate\' on the {0} minion({1}).'
+                    ' Highstate details:\n{2}'.format(
+                        self.slavename,
+                        self.saltcloud_vm_name,
+                        highstate[self.saltcloud_vm_name]['ret']
+                    ),
+                )
+                return False
+
             for step in highstate[self.saltcloud_vm_name]['ret'].values():
                 if step['result'] is False:
                     try:
