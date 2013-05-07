@@ -340,7 +340,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     #    arg=('state.highstate',),
                     #    expr_form='list'
                     #)
-                    running = self.client.cmd(
+                    running = client.cmd(
                         [self.saltcloud_vm_name],
                         'saltutil.running',
                         expr_form='list'
