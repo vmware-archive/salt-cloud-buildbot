@@ -376,7 +376,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         self.saltcloud_vm_name, running
                     )
                 )
-                if running and running.get(self.saltcloud_vm_name, None) == []:
+                if not [job_details for job_details in
+                        running.get(self.saltcloud_vm_name, [])
+                        if job_details and job_details['jid'] == job]:
                     # Job is no longer running
                     log.info(
                         '\'state.highstate\' has completed on {0}'.format(
