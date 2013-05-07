@@ -283,7 +283,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             )
 
         try:
-            attempts = 6
+            attempts = 11
             while True:
                 log.info(
                     'Publishing \'state.highstate\' job to {0}. '
@@ -324,7 +324,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             # Let the job start
             time.sleep(6)
 
-            attempts = 6
+            attempts = 11
             while True:
                 log.info(
                     'Checking if \'state.highstate\' is running on '
@@ -369,7 +369,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     continue
 
                 # Reset failed attempts
-                attempts = 6
+                log.debug('Reseting failed attempts')
+                attempts = 11
 
                 log.debug(
                     'Job is still running on {0}: {1}'.format(
@@ -437,9 +438,15 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
             for step in highstate[self.saltcloud_vm_name]['ret'].values():
                 if step['result'] is False:
-                    log.error(
-                        'The step {0[name]!r} failed!'.format(step)
-                    )
+                    try:
+                        log.error(
+                            'The step {0[name]!r} failed!'.format(step)
+                        )
+                    except KeyError:
+                        log.error(
+                            'There was failure in a step. Step '
+                            'details: {0}'.format(step)
+                        )
                     return False
             log.info(
                 'state.highstate completed without any issues on {0}'.format(
