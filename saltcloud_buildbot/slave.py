@@ -322,7 +322,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
             log.info('Published job information: {0}'.format(job))
             # Let the job start
-            time.sleep(5)
+            time.sleep(6)
 
             attempts = 6
             while True:
