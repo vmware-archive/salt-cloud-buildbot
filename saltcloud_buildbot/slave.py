@@ -297,7 +297,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         [self.saltcloud_vm_name],
                         'state.highstate',
                         expr_form='list',
-                        timeout=9999999999999999,
                     )
                     if not job:
                         attempts -= 1
@@ -335,12 +334,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
                 try:
-                    running = client.cmd(
+                    #running = client.cmd(
+                    #    [self.saltcloud_vm_name],
+                    #    'saltutil.is_running',
+                    #    arg=('state.highstate',),
+                    #    expr_form='list'
+                    #)
+                    running = self.client.cmd(
                         [self.saltcloud_vm_name],
-                        'saltutil.is_running',
-                        arg=('state.highstate',),
+                        'saltutil.running',
                         expr_form='list'
                     )
+                    log.info('Running on the minion: {0}'.format(running))
                 except salt.exceptions.SaltReqTimeoutError:
                     attempts -= 1
                     if attempts < 1:
@@ -355,7 +360,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     attempts -= 1
                     if attempts < 1:
                         log.error(
-                            'state.highstate is aparently not running '
+                            'state.highstate is apparently not running '
                             'on {0}, empty response'.format(
                                 self.saltcloud_vm_name
                             )
