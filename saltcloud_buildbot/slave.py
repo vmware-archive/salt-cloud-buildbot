@@ -43,6 +43,8 @@ reactor.suggestThreadPoolSize(30)
 
 class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
+    output = None
+
     def __init__(
         self,
         # from AbstractLatentBuildSlave
@@ -296,7 +298,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 mopts=self._salt_master_config
             )
         except Exception as err:
-            msg (
+            msg = (
                 'Failed to instantiate the salt local client: {0}\n'.format(
                     err
                 )
@@ -314,6 +316,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         attempts - 1
                     )
                 )
+                log.error(msg)
                 self.output += '\n{0}'.format(msg)
                 try:
                     job = client.cmd_async(
@@ -422,7 +425,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     attempts = 11
 
                 msg = 'Job is still running on {0}: {1}'.format(
-                        self.saltcloud_vm_name, running
+                    self.saltcloud_vm_name, running
                 )
                 self.output += '\n{0}'.format(msg)
                 log.info(msg)
