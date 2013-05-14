@@ -32,7 +32,7 @@ from twisted.internet import defer, reactor, threads
 
 # Import buildbot libs
 from buildbot.buildslave import AbstractLatentBuildSlave
-from buildbot import interfaces
+from buildbot.interfaces import LatentBuildSlaveFailedToSubstantiate
 
 
 log = logging.getLogger(__name__)
@@ -211,6 +211,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         request = urllib2.urlopen('http://v4.ident.me/')
                         public_ip = request.read()
                         minion_conf['master'] = public_ip
+                        self.output += (
+                            '\nFound local public IP address, {0},  to be '
+                            'used as the master address'.format(public_ip)
+                        )
                         break
                     except urllib2.HTTPError:
                         log.warn(
@@ -223,9 +227,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             exc_info=log.isEnabledFor(logging.DEBUG)
                         )
                 else:
-                    raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                        config['profile'],
-                        'Failed to get the public IP for the master.'
+                    msg = 'Failed to get the public IP for the master.'
+                    self.output += '\n{0}'.format(msg)
+                    raise LatentBuildSlaveFailedToSubstantiate(
+                        config['profile'], msg
                     )
 
             # Set the buildbot slave name as a grain
@@ -244,7 +249,17 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.run_profile()
-            log.info(
+            if not ret:
+                msg = 'Failed to start {0} for slave {1}'.format(
+                    self.saltcloud_vm_name,
+                    self.slavename
+                )
+                log.error(msg)
+                self.output += '\n{0}'.format(msg)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_vm_name, msg
+                )
+            msg = (
                 'salt-cloud started VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
                     self.saltcloud_vm_name,
@@ -254,59 +269,52 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
             )
-            if not ret:
-                raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                    self.saltcloud_vm_name,
-                    'Failed to start {0} for slave {1}'.format(
-                        self.saltcloud_vm_name,
-                        self.slavename
-                    )
-                )
+            self.output += '\n{0}'.format(msg)
+            log.info(msg)
         except Exception, err:
-            log.error(
+            msg = (
                 'salt-cloud failed to start VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
                     self.saltcloud_vm_name,
                     self.slavename,
                     err
-                ),
-                exc_info=True
-            )
-            raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                self.saltcloud_vm_name,
-                'Failed to start {0} for slave {1}: {2}'.format(
-                    self.saltcloud_vm_name,
-                    self.slavename,
-                    err
                 )
+            )
+            log.error(msg, exc_info=True)
+            self.output += '\n{0}'.format(msg)
+            raise LatentBuildSlaveFailedToSubstantiate(
+                self.saltcloud_vm_name, msg
             )
 
         # Let the minion connect back
         time.sleep(2)
 
         try:
-            log.info('Running \'state.highstate\' on the minion')
+            msg = 'Running \'state.highstate\' on the minion'
+            self.output += '\n{0}'.format(msg)
             client = salt.client.LocalClient(
                 mopts=self._salt_master_config
             )
         except Exception as err:
-            log.error(
+            msg (
                 'Failed to instantiate the salt local client: {0}\n'.format(
                     err
-                ),
-                exc_info=True
+                )
             )
+            self.output += '\n{0}'.format(msg)
+            log.error(msg, exc_info=True)
 
         try:
             attempts = 11
             while True:
-                log.info(
+                msg = (
                     'Publishing \'state.highstate\' job to {0}. '
                     'Attempts remaining {1}'.format(
                         self.saltcloud_vm_name,
                         attempts - 1
                     )
                 )
+                self.output += '\n{0}'.format(msg)
                 try:
                     job = client.cmd_async(
                         [self.saltcloud_vm_name],
@@ -316,127 +324,141 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     if not job:
                         attempts -= 1
                         if attempts < 1:
-                            log.error(
+                            msg = (
                                 'Failed to publish \'state.highstate\' job to '
                                 '{0}. Returned empty response.'.format(
                                     self.saltcloud_vm_name
                                 )
                             )
-                            return False
+                            log.error(msg)
+                            self.output += '\n{0}'.format(msg)
+                            raise LatentBuildSlaveFailedToSubstantiate(
+                                self.saltcloud_vm_name, msg
+                            )
                         continue
                     break
                 except salt.exceptions.SaltReqTimeoutError:
                     attempts -= 1
                     if attempts < 1:
-                        log.error(
+                        msg = (
                             'Failed to publish \'state.highstate\' job to '
-                            '{0}, timed out. '.format(self.saltcloud_vm_name)
-                        )
-                        raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                            self.saltcloud_vm_name,
-                            'Failed to publish \'state.highstate\' job '
-                            'to {0} for slave {1}, timed out'.format(
+                            '{0} for slave {1}, timed out.'.format(
                                 self.saltcloud_vm_name,
                                 self.slavename
                             )
                         )
+                        self.output += '\n{0}'.format(msg)
+                        log.error(msg)
+                        raise LatentBuildSlaveFailedToSubstantiate(
+                            self.saltcloud_vm_name, msg
+                        )
                     continue
 
-            log.info('Published job information: {0}'.format(job))
+            msg = 'Published job information: {0}'.format(job)
+            self.output += '\n{0}'.format(msg)
+            log.info(msg)
+
             # Let the job start
             time.sleep(6)
 
             attempts = 11
             while True:
-                log.info(
+                msg = (
                     'Checking if \'state.highstate\' is running on '
                     '{0}. Attempts remaining {1}'.format(
                         self.saltcloud_vm_name,
                         attempts - 1
                     )
                 )
+                self.output += '\n{0}'.format(msg)
+                log.info(msg)
                 try:
                     running = client.cmd(
                         [self.saltcloud_vm_name],
                         'saltutil.running',
                         expr_form='list'
                     )
-                    log.info('Running on the minion: {0}'.format(running))
+                    msg = 'Running on the minion: {0}'.format(running)
+                    log.info(msg)
+                    self.output += '\n{0}'.format(msg)
                 except salt.exceptions.SaltReqTimeoutError:
                     attempts -= 1
                     if attempts < 1:
-                        log.error(
+                        msg = (
                             'Failed to check if state.highstate is running '
-                            'on {0}, timed out'.format(self.saltcloud_vm_name)
-                        )
-                        raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                            self.saltcloud_vm_name,
-                            'Failed to publish \'state.highstate\' job '
-                            'to {0} for slave {1}, timed out'.format(
-                                self.saltcloud_vm_name,
-                                self.slavename
+                            'on {0} for slave {1}, timed out'.format(
+                                self.saltcloud_vm_name, self.slavename
                             )
+                        )
+                        log.error(msg)
+                        self.output += '\n{0}'.format(msg)
+                        raise LatentBuildSlaveFailedToSubstantiate(
+                            self.saltcloud_vm_name, msg
                         )
                     continue
 
                 if not running:
                     attempts -= 1
                     if attempts < 1:
-                        log.error(
+                        msg = (
                             'state.highstate is apparently not running '
-                            'on {0}, empty response'.format(
-                                self.saltcloud_vm_name
-                            )
-                        )
-                        raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                            self.saltcloud_vm_name,
-                            'Failed to publish \'state.highstate\' job '
-                            'to {0} for slave {1}, empty response'.format(
+                            'on {0} for slave {1}, empty response'.format(
                                 self.saltcloud_vm_name,
                                 self.slavename
                             )
+                        )
+                        log.error(msg)
+                        self.output += '\n{0}'.format(msg)
+                        raise LatentBuildSlaveFailedToSubstantiate(
+                            self.saltcloud_vm_name, msg
                         )
                     continue
 
                 # Reset failed attempts
                 if attempts < 11:
-                    log.debug('Reseting failed attempts')
+                    msg = 'Reseting failed attempts'
+                    log.info(msg)
+                    self.output += '\n{0}'.format(msg)
                     attempts = 11
 
-                log.debug(
-                    'Job is still running on {0}: {1}'.format(
+                msg = 'Job is still running on {0}: {1}'.format(
                         self.saltcloud_vm_name, running
-                    )
                 )
+                self.output += '\n{0}'.format(msg)
+                log.info(msg)
                 if not [job_details for job_details in
                         running.get(self.saltcloud_vm_name, [])
                         if job_details and job_details['jid'] == job]:
                     # Job is no longer running
-                    log.info(
-                        '\'state.highstate\' has completed on {0}'.format(
-                            self.saltcloud_vm_name
-                        )
+                    msg = '\'state.highstate\' has completed on {0}'.format(
+                        self.saltcloud_vm_name
                     )
+                    self.output += '\n{0}'.format(msg)
+                    log.info(msg)
                     break
                 time.sleep(5)
 
-            log.info(
-                'state.highstate has apparently completed in {0}'.format(
-                    self.saltcloud_vm_name
-                )
+            msg = 'state.highstate has apparently completed in {0}'.format(
+                self.saltcloud_vm_name
             )
+            self.output += '\n{0}'.format(msg)
+            log.info(msg)
+
             # Let the minion settle
             time.sleep(2)
-            log.info(
+            msg = (
                 'Getting \'state.highstate\' job information from {0}'.format(
                     self.saltcloud_vm_name
                 )
             )
+            self.output += '\n{0}'.format(msg)
+            log.info(msg)
+
             highstate = client.get_full_returns(
                 job, [self.saltcloud_vm_name], timeout=5
             )
             try:
-                log.info(
+                msg = (
                     'Output of running \'state.highstate\' on the {0} '
                     'minion({1}):\n{2}'.format(
                         self.slavename,
@@ -448,8 +470,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     )
                 )
+                self.output += '\n{0}'.format(msg)
+                log.info(msg)
             except Exception:
-                log.info(
+                msg = (
                     'Output of running \'state.highstate\' on the {0} '
                     'minion({1}):\n{2}'.format(
                         self.slavename,
@@ -459,25 +483,25 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     )
                 )
+                self.output += '\n{0}'.format(msg)
+                log.info(msg)
 
             if not highstate or 'Error' in highstate:
-                log.debug(
-                    'Returned empty or error running state.highstate on '
-                    '{0}: {1}'.format(self.saltcloud_vm_name, highstate)
-                )
-                raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                    self.saltcloud_vm_name,
+                msg = (
                     'Returned empty or error running state.highstate on '
                     '{0} for slave {1}: {2}'.format(
-                        self.saltcloud_vm_name,
-                        self.slavename,
-                        highstate
+                        self.saltcloud_vm_name, highstate
                     )
+                )
+                self.output += '\n{0}'.format(msg)
+                log.error(msg)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_vm_name, msg
                 )
 
             if isinstance(highstate[self.saltcloud_vm_name]['ret'], list):
                 # We got a list back!?
-                log.error(
+                msg = (
                     'Failed to run \'state.highstate\' on the {0} minion({1}).'
                     ' Highstate details:\n{2}'.format(
                         self.slavename,
@@ -485,14 +509,10 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         highstate[self.saltcloud_vm_name]['ret']
                     ),
                 )
-                raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                    self.saltcloud_vm_name,
-                    'Failed to run \'state.highstate\' on the {0} minion({1}).'
-                    ' Highstate details:\n{2}'.format(
-                        self.slavename,
-                        self.saltcloud_vm_name,
-                        highstate[self.saltcloud_vm_name]['ret']
-                    )
+                self.output += '\n{0}'.format(msg)
+                log.error(msg)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_vm_name, msg
                 )
 
             for step in highstate[self.saltcloud_vm_name]['ret'].values():
@@ -505,34 +525,34 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             'Step details: {0}'.format(step)
                         )
                     log.error(msg)
-                    raise interfaces.LatentBuildSlaveFailedToSubstantiate(
+                    self.output += '\n{0}'.format(msg)
+                    raise LatentBuildSlaveFailedToSubstantiate(
                         self.saltcloud_vm_name, msg
                     )
-            log.info(
+            msg = (
                 'state.highstate completed without any issues on {0}'.format(
                     self.saltcloud_vm_name
                 )
             )
+            self.output += '\n{0}'.format(msg)
+            log.info(msg)
             return [self.saltcloud_vm_name, self.slavename]
         except Exception, err:
-            log.error(
+            msg = (
                 'Failed to run \'state.highstate\' on the {0} minion({1}). '
                 'Details:\n{2}'.format(
                     self.slavename,
                     self.saltcloud_vm_name,
                     err
-                ),
+                )
+            )
+            log.error(
+                msg,
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
-            raise interfaces.LatentBuildSlaveFailedToSubstantiate(
-                self.saltcloud_vm_name,
-                'Failed to run \'state.highstate\' on the {0} minion({1}).'
-                ' Highstate details:\n{2}'.format(
-                    self.slavename,
-                    self.saltcloud_vm_name,
-                    highstate[self.saltcloud_vm_name]['ret']
-                )
+            raise LatentBuildSlaveFailedToSubstantiate(
+                self.saltcloud_vm_name, msg
             )
 
     def stop_instance(self, fast=False):
@@ -544,7 +564,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         mapper = saltcloud.cloud.Map(config)
         try:
             ret = mapper.destroy(config['names'])
-            log.info(
+            msg = (
                 'salt-cloud stopped VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
                     self.saltcloud_vm_name,
@@ -552,16 +572,18 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     salt.output.out_format(ret, 'pprint', config)
                 )
             )
+            log.info(msg)
+            self.output += '\n{0}'.format(msg)
             self.output = None
             return True
         except Exception, err:
-            log.error(
+            msg = (
                 'salt-cloud failed to stop VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
                     self.saltcloud_vm_name,
                     self.slavename,
                     err
-                ),
-                exc_info=True
+                )
             )
+            log.error(msg, exc_info=True)
             raise
