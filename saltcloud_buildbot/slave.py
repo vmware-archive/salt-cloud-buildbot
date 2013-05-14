@@ -576,6 +576,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 )
             )
             log.info(msg)
+            if self.output is None:
+                self.output = ''
             self.output += '\n{0}'.format(msg)
             self.output = None
             return True
