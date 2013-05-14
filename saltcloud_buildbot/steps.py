@@ -30,7 +30,10 @@ class SaltStateCommand(SaltCallCommand):
         if isinstance(salt_call_args, basestring):
             salt_call_args = salt_call_args.split()
         command = ['salt-call']
-        command.extend(salt_call_args)
+        if isinstance(salt_call_args, basestring):
+            salt_call_args = salt_call_args.split()
+        if salt_call_args:
+            command.extend(salt_call_args)
         command.extend(['state.single', state_name])
         kwargs['command'] = command
         ShellCommand.__init__(self, **kwargs)
