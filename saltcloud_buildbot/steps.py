@@ -11,6 +11,7 @@
 '''
 
 from buildbot.steps.shell import ShellCommand
+from buildbot.status.results import SUCCESS, FAILURE, WARNINGS
 
 
 class SaltCallCommand(ShellCommand):
@@ -28,6 +29,7 @@ class SaltCallCommand(ShellCommand):
                 salt_call_args = salt_call_args.split()
             command.extend(salt_call_args)
         kwargs['command'] = command
+        kwargs['decodeRC'] = {0: SUCCESS, 1: FAILURE, 2: WARNINGS}
         ShellCommand.__init__(self, **kwargs)
 
 
@@ -47,4 +49,5 @@ class SaltStateCommand(SaltCallCommand):
             command.extend(salt_call_args)
         command.extend(['state.sls', state_name])
         kwargs['command'] = command
+        kwargs['decodeRC'] = {0: SUCCESS, 1: FAILURE, 2: WARNINGS}
         ShellCommand.__init__(self, **kwargs)
