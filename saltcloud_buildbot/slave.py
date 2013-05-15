@@ -28,7 +28,7 @@ import saltcloud.config
 salt.log.setup_temp_logger()
 
 # Import twisted libs
-from twisted.internet import defer, reactor, threads
+from twisted.internet import reactor, threads
 
 # Import buildbot libs
 from buildbot.buildslave import AbstractLatentBuildSlave
@@ -338,7 +338,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     continue
 
             log.info('Published job information: {0}'.format(job))
-            log.info(msg)
 
             # Let the job start
             time.sleep(6)
