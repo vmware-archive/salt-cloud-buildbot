@@ -33,7 +33,7 @@ class SaltCallCommand(ShellCommand):
         ShellCommand.__init__(self, **kwargs)
 
 
-class SaltStateCommand(SaltCallCommand):
+class SaltTemplateCommand(SaltCallCommand):
 
     def __init__(self, state_name, salt_call_args=None, **kwargs):
         if isinstance(salt_call_args, basestring):
@@ -47,7 +47,7 @@ class SaltStateCommand(SaltCallCommand):
             if isinstance(salt_call_args, basestring):
                 salt_call_args = salt_call_args.split()
             command.extend(salt_call_args)
-        command.extend(['state.sls', state_name])
+        command.extend(['state.sls', state_name.rstrip('.sls')])
         kwargs['command'] = command
         kwargs['decodeRC'] = {0: SUCCESS, 1: FAILURE, 2: WARNINGS}
         ShellCommand.__init__(self, **kwargs)
