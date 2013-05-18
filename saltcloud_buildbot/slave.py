@@ -253,7 +253,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_vm_name, msg
                 )
 
-            if 'Errors' in ret:
+            if 'Errors' in ret[self.saltcloud_vm_name]:
                 msg = (
                     'There were errors while trying to start salt-cloud VM '
                     '{0} for slave {1}: {2}'.format(
