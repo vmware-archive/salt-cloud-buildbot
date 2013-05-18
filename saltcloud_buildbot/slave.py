@@ -252,6 +252,21 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
+
+            if 'Errors' in ret:
+                msg = (
+                    'There were errors while trying to start salt-cloud VM '
+                    '{0} for slave {1}: {2}'.format(
+                        self.saltcloud_vm_name,
+                        self.slavename,
+                        ret['Errors']
+                    )
+                )
+                log.error(msg)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_vm_name, msg
+                )
+
             log.info(
                 'salt-cloud started VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
