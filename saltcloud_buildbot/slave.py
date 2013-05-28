@@ -561,3 +561,5 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             )
             log.error(msg, exc_info=True)
             raise
+        finally:
+            self.botmaster.maybeStartBuildsForSlave(self.name)
