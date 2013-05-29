@@ -259,13 +259,30 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     '{0} for slave {1}: {2}'.format(
                         self.saltcloud_vm_name,
                         self.slavename,
-                        ret['Errors']
+                        ret[self.saltcloud_vm_name]['Errors']
                     )
                 )
                 log.error(msg)
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
+
+            try:
+                if 'Errors' in ret[self.saltcloud_vm_name][self.saltcloud_vm_name]:
+                    msg = (
+                        'There were errors while trying to start salt-cloud VM '
+                        '{0} for slave {1}: {2}'.format(
+                            self.saltcloud_vm_name,
+                            self.slavename,
+                            ret[self.saltcloud_vm_name][self.saltcloud_vm_name]['Errors']
+                        )
+                    )
+                log.error(msg)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_vm_name, msg
+                )
+            except KeyError:
+                pass
 
             log.info(
                 'salt-cloud started VM {0} for slave {1}. '
@@ -472,7 +489,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 msg = (
                     'Returned empty or error running state.highstate on '
                     '{0} for slave {1}: {2}'.format(
-                        self.saltcloud_vm_name, highstate
+                        self.saltcloud_vm_name,
+                        self.slavename,
+                        highstate
                     )
                 )
                 log.error(msg)
