@@ -263,6 +263,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
                 log.error(msg)
+                reactor.callLater(
+                    self.botmaster.maybeStartBuildsForSlave, 5, self.name
+                )
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
@@ -278,6 +281,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     )
                 log.error(msg)
+                reactor.callLater(
+                    self.botmaster.maybeStartBuildsForSlave, 5, self.name
+                )
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
@@ -304,6 +310,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 )
             )
             log.error(msg, exc_info=True)
+            reactor.callLater(
+                self.botmaster.maybeStartBuildsForSlave, 5, self.name
+            )
             raise LatentBuildSlaveFailedToSubstantiate(
                 self.saltcloud_vm_name, msg
             )
@@ -400,6 +409,11 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             )
                         )
                         log.error(msg)
+                        reactor.callLater(
+                           self.botmaster.maybeStartBuildsForSlave,
+                           5,
+                           self.name
+                        )
                         raise LatentBuildSlaveFailedToSubstantiate(
                             self.saltcloud_vm_name, msg
                         )
@@ -495,6 +509,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     )
                 )
                 log.error(msg)
+                reactor.callLater(
+                    self.botmaster.maybeStartBuildsForSlave, 5, self.name
+                )
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
@@ -510,6 +527,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     ),
                 )
                 log.error(msg)
+                reactor.callLater(
+                    self.botmaster.maybeStartBuildsForSlave, 5, self.name
+                )
                 raise LatentBuildSlaveFailedToSubstantiate(
                     self.saltcloud_vm_name, msg
                 )
@@ -547,6 +567,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
+            reactor.callLater(
+                self.botmaster.maybeStartBuildsForSlave, 5, self.name
+            )
             raise LatentBuildSlaveFailedToSubstantiate(
                 self.saltcloud_vm_name, msg
             )
@@ -581,4 +604,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             log.error(msg, exc_info=True)
             raise
         finally:
-            self.botmaster.maybeStartBuildsForSlave(self.name)
+            reactor.callLater(
+                self.botmaster.maybeStartBuildsForSlave, 5, self.name
+            )
