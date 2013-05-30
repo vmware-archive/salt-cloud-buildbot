@@ -594,5 +594,5 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             raise
         finally:
             reactor.callLater(
-                self.botmaster.maybeStartBuildsForSlave, 5, self.name
+                5, self.botmaster.maybeStartBuildsForSlave, self.name
             )
