@@ -382,6 +382,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             time.sleep(6)
 
             attempts = 11
+            job_running = False
             while True:
                 log.info(
                     'Checking if \'state.highstate\' is running on '
@@ -413,7 +414,8 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     continue
 
-                if not running:
+                if not running or (running and not job_running and not
+                                   running.get(self.saltcloud_vm_name, [])):
                     attempts -= 1
                     if attempts < 1:
                         msg = (
@@ -428,6 +430,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                             self.saltcloud_vm_name, msg
                         )
                     continue
+
+                if job_running is False:
+                    job_running = True
 
                 # Reset failed attempts
                 if attempts < 11:
@@ -565,6 +570,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
     def stop_instance(self, fast=False):
         # responsible for shutting down instance.
+        log.info(
+            'Shutting down VM {0} for slave {1}'.format(
+                self.saltcloud_vm_name,
+                self.slavename
+            )
+        )
         return threads.deferToThread(self.__stop_instance)
 
     def __stop_instance(self):
