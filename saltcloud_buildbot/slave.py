@@ -106,29 +106,16 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         salt.log.setup_console_logger('debug')
 
         # Read/Parse salt-cloud configurations
-        # salt master configuration
-        master_config = self._salt_master_config = salt.config.master_config(
-            self.saltcloud_master_config
+        config = saltcloud.config.cloud_config(
+            # salt-cloud config
+            self.saltcloud_config,
+            # salt master configuration
+            master_config_path=self.saltcloud_master_config,
+            # providers configuration
+            providers_config_path=self.saltcloud_providers_config,
+            # profiles configuration
+            vm_config_path=self.saltcloud_vm_config
         )
-
-        # salt-cloud config
-        cloud_config = saltcloud.config.cloud_config(
-            self.saltcloud_config
-        )
-
-        # profiles configuration
-        profiles_config = saltcloud.config.vm_profiles_config(
-            self.saltcloud_vm_config
-        )
-
-        providers_config = saltcloud.config.cloud_providers_config(
-            self.saltcloud_providers_config
-        )
-
-        config = master_config.copy()
-        config.update(cloud_config)
-        config['vm'] = profiles_config
-        config['providers'] = providers_config
 
         # Update with some parsers cli defaults
         config.update({
@@ -138,39 +125,144 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             'keep_tmp': False
         })
 
-        # The profile we wish to run
-        config['profile'] = self.saltcloud_profile_name
-
-        # The machine name
-        config['names'] = [self.saltcloud_vm_name]
-
         # Now configure logging respecting the configuration
-        salt.log.setup_console_logger(
-            config['log_level'],
-            log_format=config['log_fmt_console'],
-            date_format=config['log_datefmt']
+        # First console logging
+        cli_log_fmt = 'cli_salt_cloud_log_fmt'
+        if cli_log_fmt in config and not config.get(cli_log_fmt):
+            # Remove it from config so it inherits from log_fmt_console
+            config.pop(cli_log_fmt)
+        logfmt = config.get(
+            cli_log_fmt, config.get(
+                'log_fmt_console',
+                config.get(
+                    'log_fmt',
+                    saltcloud.config._DFLT_LOG_FMT_CONSOLE
+                )
+            )
         )
 
-        loglevel = config.get('log_level_logfile', config['log_level'])
+        cli_log_datefmt = 'cli_salt_cloud_log_datefmt'
+        if cli_log_datefmt in config and not config.get(cli_log_datefmt):
+            # Remove it from config so it inherits from log_datefmt_console
+            config.pop(cli_log_datefmt)
+
+        if config.get('log_datefmt_console', None) is None:
+            # Remove it from config so it inherits from log_datefmt
+            config.pop('log_datefmt_console', None)
+
+        datefmt = config.get(
+            cli_log_datefmt,
+            config.get(
+                'log_datefmt_console',
+                config.get(
+                    'log_datefmt',
+                    '%Y-%m-%d %H:%M:%S'
+                )
+            )
+        )
+
+        salt.log.setup_console_logger(
+            config['log_level'], log_format=logfmt, date_format=datefmt
+        )
+
+        # Now the log file logging
+        if 'log_level_logfile' in config and not \
+                config.get('log_level_logfile'):
+            # Remove it from config so it inherits from log_level
+            config.pop('log_level_logfile')
+
+        loglevel = config.get(
+            'log_level_logfile',
+            # From the console setting
+            config['log_level']
+        )
+
+        cli_log_path = 'cli_salt_cloud_log_file'
+        if cli_log_path in config and not config.get(cli_log_path):
+            # Remove it from config so it inherits from log_level_logfile
+            config.pop(cli_log_path)
+
+        if 'log_level_logfile' in config and not \
+                config.get('log_level_logfile'):
+            # Remove it from config so it inherits from log_file
+            config.pop('log_level_logfile')
+
+        logfile = config.get(
+            # First from the config cli setting
+            cli_log_path,
+            config.get(
+                # From the config setting
+                'log_level_logfile'
+                # From the default setting
+                '/var/log/salt/cloud'
+            )
+        )
+
+        cli_log_file_fmt = 'cli_salt_cloud_log_file_fmt'
+        if cli_log_file_fmt in config and not config.get(cli_log_file_fmt):
+            # Remove it from config so it inherits from log_fmt_logfile
+            config.pop(cli_log_file_fmt)
+
         if config.get('log_fmt_logfile', None) is None:
             # Remove it from config so it inherits from log_fmt_console
             config.pop('log_fmt_logfile', None)
 
-        logfmt = config.get('log_fmt_logfile', config['log_fmt_console'])
-        if config.get('log_datefmt', None) is None:
-            # Remove it from config so it get's the default value bellow
-            config.pop('log_datefmt', None)
+        log_file_fmt = config.get(
+            cli_log_file_fmt,
+            config.get(
+                'cli_salt_cloud_log_fmt',
+                config.get(
+                    'log_fmt_logfile',
+                    config.get(
+                        'log_fmt_console',
+                        config.get(
+                            'log_fmt',
+                            saltcloud.config._DFLT_LOG_FMT_CONSOLE
+                        )
+                    )
+                )
+            )
+        )
 
-        datefmt = config.get(
-            'log_datefmt_logfile',
-            config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        cli_log_file_datefmt = 'cli_salt_cloud_log_file_datefmt'
+        if cli_log_file_datefmt in config and not \
+                config.get(cli_log_file_datefmt):
+            # Remove it from config so it inherits from log_datefmt_logfile
+            config.pop(cli_log_file_datefmt)
+
+        if config.get('log_datefmt_logfile', None) is None:
+            # Remove it from config so it inherits from log_datefmt_console
+            config.pop('log_datefmt_logfile', None)
+
+        if config.get('log_datefmt_console', None) is None:
+            # Remove it from config so it inherits from log_datefmt
+            config.pop('log_datefmt_console', None)
+
+        log_file_datefmt = config.get(
+            cli_log_file_datefmt,
+            config.get(
+                'cli_salt_cloud_log_datefmt',
+                config.get(
+                    'log_datefmt_logfile',
+                    config.get(
+                        'log_datefmt_console',
+                        config.get(
+                            'log_datefmt',
+                            '%Y-%m-%d %H:%M:%S'
+                        )
+                    )
+                )
+            )
         )
+
         salt.log.setup_logfile_logger(
-            config['log_file'],
+            logfile,
             loglevel,
-            log_format=logfmt,
-            date_format=datefmt
+            log_format=log_file_fmt,
+            date_format=log_file_datefmt
         )
+
+        # Now setup any granular logging levels
         for name, level in config['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
 
@@ -186,64 +278,75 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         return threads.deferToThread(self.__start_instance)
 
     def __start_instance(self):
-        config = self.__load_saltcloud_config()
+        config = self.__load_saltcloud_config().copy()
 
-        for idx, vm_ in enumerate(config['vm']):
-            if vm_['profile'] != config['profile']:
-                continue
-
-            minion_conf = saltcloud.config.get_config_value(
-                'minion', vm_, config, default={}
+        profile = config['profiles'].get(self.saltcloud_profile_name, None)
+        if profile is None:
+            msg = 'The profile {0!r} does not exist.'.format(
+                self.saltcloud_profile_name
+            )
+            log.error(msg)
+            reactor.callLater(0, self.stop_instance)
+            raise LatentBuildSlaveFailedToSubstantiate(
+                self.saltcloud_profile_name, msg
             )
 
-            # Setup the required slave grains to be used by the minion
-            if not minion_conf.get('master', None):
-                import urllib2
-                attempts = 5
-                while attempts > 0:
-                    try:
-                        request = urllib2.urlopen('http://v4.ident.me/')
-                        public_ip = request.read()
-                        minion_conf['master'] = public_ip
-                        log.info(
-                            'Found local public IP address, {0},  to be '
-                            'used as the master address'.format(public_ip)
-                        )
-                        break
-                    except urllib2.HTTPError:
-                        log.warn(
-                            'Failed to get the public IP for the master. '
-                            'Remaining attempts: {0}'.format(
-                                attempts
-                            ),
-                            # Show the traceback if the debug logging level is
-                            # enabled
-                            exc_info=log.isEnabledFor(logging.DEBUG)
-                        )
-                else:
-                    msg = 'Failed to get the public IP for the master.'
-                    log.warning(msg)
-                    reactor.callLater(0, self.stop_instance)
-                    raise LatentBuildSlaveFailedToSubstantiate(
-                        config['profile'], msg
+        minion_conf = saltcloud.config.get_config_value(
+            'minion', profile, config, default={}
+        )
+
+        # Setup the required slave grains to be used by the minion
+        if not minion_conf.get('master', None):
+            import urllib2
+            attempts = 5
+            while attempts > 0:
+                try:
+                    request = urllib2.urlopen('http://v4.ident.me/')
+                    public_ip = request.read()
+                    minion_conf['master'] = public_ip
+                    log.info(
+                        'Found local public IP address, {0},  to be '
+                        'used as the master address'.format(public_ip)
                     )
+                    break
+                except urllib2.HTTPError:
+                    log.warn(
+                        'Failed to get the public IP for the master. '
+                        'Remaining attempts: {0}'.format(
+                            attempts
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
+                    )
+            else:
+                msg = 'Failed to get the public IP for the master.'
+                log.warning(msg)
+                reactor.callLater(0, self.stop_instance)
+                raise LatentBuildSlaveFailedToSubstantiate(
+                    self.saltcloud_profile_name, msg
+                )
 
-            # Set the buildbot slave name as a grain
-            minion_conf.setdefault(
-                'grains', {}).setdefault(
-                    'buildbot', {})['slavename'] = self.slavename
-
+            # Set the buildbot slave name and password as a grain
+            if 'grains' not in minion_conf:
+                minion_conf['grains'] = {}
+            if 'buildbot' not in minion_conf['grains']:
+                minion_conf['grains']['buildbot'] = {}
+            minion_conf['slavename'] = self.slavename
             # Set the buildbot password as a grain
-            minion_conf.setdefault(
-                'grains', {}).setdefault(
-                    'buildbot', {})['password'] = self.password
+            minion_conf['password'] = self.password
+
+            # Remove settings that should be set at runtime
+            minion_conf.pop('conf_file', None)
 
             # Update the virtual machines minion configuration
-            config['vm'][idx]['minion'] = minion_conf
+            config['profiles'][self.saltcloud_vm_name]['minion'] = minion_conf
 
         mapper = saltcloud.cloud.Map(config)
         try:
-            ret = mapper.run_profile()
+            ret = mapper.run_profile(
+                self.saltcloud_profile_name, [self.saltcloud_vm_name]
+            )
             if not ret:
                 msg = 'Failed to start {0} for slave {1}'.format(
                     self.saltcloud_vm_name,
