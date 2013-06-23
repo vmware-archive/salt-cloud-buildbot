@@ -136,7 +136,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 'log_fmt_console',
                 config.get(
                     'log_fmt',
-                    saltcloud.config._DFLT_LOG_FMT_CONSOLE
+                    salt.config._DFLT_LOG_FMT_CONSOLE
                 )
             )
         )
@@ -217,7 +217,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         'log_fmt_console',
                         config.get(
                             'log_fmt',
-                            saltcloud.config._DFLT_LOG_FMT_CONSOLE
+                            salt.config._DFLT_LOG_FMT_CONSOLE
                         )
                     )
                 )
