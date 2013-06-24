@@ -685,7 +685,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
         config = self.__load_saltcloud_config()
         mapper = saltcloud.cloud.Map(config)
         try:
-            ret = mapper.destroy(config['names'])
+            ret = mapper.destroy([self.saltcloud_vm_name])
             log.info(
                 'salt-cloud stopped VM {0} for slave {1}. '
                 'Details:\n{2}'.format(
