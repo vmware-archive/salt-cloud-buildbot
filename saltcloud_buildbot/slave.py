@@ -421,7 +421,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         try:
             log.info('Running \'state.highstate\' on the minion')
-            client = salt.client.LocalClient(mopts=self._salt_master_config)
+            client = salt.client.LocalClient(c_conf=self.saltcloud_master_config)
         except Exception as err:
             log.error(
                 'Failed to instantiate the salt local client: {0}\n'.format(
