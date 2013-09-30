@@ -482,11 +482,12 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
             log.info('Published job information: {0}'.format(job))
 
             # Let the job start
-            time.sleep(6)
+            time.sleep(1)
 
             attempts = 11
             job_running = False
             while True:
+                time.sleep(5)
                 log.info(
                     'Checking if \'state.highstate\' is running on '
                     '{0}. Attempts remaining {1}'.format(
@@ -557,7 +558,6 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                         )
                     )
                     break
-                time.sleep(5)
 
             log.info(
                 'state.highstate has apparently completed in {0}'.format(
