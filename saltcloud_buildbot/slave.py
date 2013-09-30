@@ -332,9 +332,9 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                 minion_conf['grains'] = {}
             if 'buildbot' not in minion_conf['grains']:
                 minion_conf['grains']['buildbot'] = {}
-            minion_conf['slavename'] = self.slavename
+            minion_conf['grains']['buildbot']['slavename'] = self.slavename
             # Set the buildbot password as a grain
-            minion_conf['password'] = self.password
+            minion_conf['grains']['buildbot']['password'] = self.password
 
             # Remove settings that should be set at runtime
             minion_conf.pop('conf_file', None)
@@ -421,7 +421,7 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
 
         try:
             log.info('Running \'state.highstate\' on the minion')
-            client = salt.client.LocalClient(c_conf=self.saltcloud_master_config)
+            client = salt.client.LocalClient(c_path=self.saltcloud_master_config)
         except Exception as err:
             log.error(
                 'Failed to instantiate the salt local client: {0}\n'.format(
