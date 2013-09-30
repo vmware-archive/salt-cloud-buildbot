@@ -327,20 +327,21 @@ class SaltCloudLatentBuildSlave(AbstractLatentBuildSlave):
                     self.saltcloud_profile_name, msg
                 )
 
-            # Set the buildbot slave name and password as a grain
-            if 'grains' not in minion_conf:
-                minion_conf['grains'] = {}
-            if 'buildbot' not in minion_conf['grains']:
-                minion_conf['grains']['buildbot'] = {}
-            minion_conf['grains']['buildbot']['slavename'] = self.slavename
-            # Set the buildbot password as a grain
-            minion_conf['grains']['buildbot']['password'] = self.password
+        # Set the buildbot slave name and password as a grain
+        if 'grains' not in minion_conf:
+            minion_conf['grains'] = {}
 
-            # Remove settings that should be set at runtime
-            minion_conf.pop('conf_file', None)
+        if 'buildbot' not in minion_conf['grains']:
+            minion_conf['grains']['buildbot'] = {}
 
-            # Update the virtual machines minion configuration
-            config['profiles'][self.saltcloud_vm_name]['minion'] = minion_conf
+        minion_conf['grains']['buildbot']['slavename'] = self.slavename
+        minion_conf['grains']['buildbot']['password'] = self.password
+
+        # Remove settings that should be set at runtime
+        minion_conf.pop('conf_file', None)
+
+        # Update the virtual machines minion configuration
+        config['profiles'][self.saltcloud_vm_name]['minion'] = minion_conf
 
         mapper = saltcloud.cloud.Map(config)
         try:
